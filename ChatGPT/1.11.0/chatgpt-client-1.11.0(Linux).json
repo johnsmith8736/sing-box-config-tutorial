@@ -75,7 +75,7 @@
     {
       "type": "vless",
       "tag": "sing-box-reality",
-      "server": "34.97.173.171",
+      "server": "34.97.73.17",
       "server_port": 443,
       "uuid": "0df3dd7d-2ad7-48cc-9a0f-2477f16b544d",
       "flow": "xtls-rprx-vision",
