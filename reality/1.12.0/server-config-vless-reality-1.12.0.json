@@ -1,0 +1,135 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "alidns",
+        "type": "https",
+        "server": "223.5.5.5",
+        "detour": "direct"
+      },
+      {
+        "tag": "cloudflare",
+        "type": "https",
+        "server": "1.1.1.1",
+        "detour": "direct"
+      },
+      {
+        "tag": "block",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": ["geosite-cn"],
+        "server": "alidns",
+        "rule_set_ip_cidr_accept_empty": true
+      },
+      {
+        "rule_set": ["geosite-category-ads-all"],
+        "server": "block",
+        "rule_set_ip_cidr_accept_empty": true
+      }
+    ],
+    "final": "cloudflare"
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [
+        {
+          "uuid": "59014fcc-96d6-480f-9e0c-273fa8a10daa",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "www.nhk.or.jp",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "www.nhk.or.jp",
+            "server_port": 443
+          },
+          "private_key": "MJrT4j4gGIiF-puAYGpC-hO5L3q8hGx8HT6GAL_F_0w",
+          "short_id": [
+            "313eccbac6c73028"
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct",
+      "domain_resolver": {
+        "server": "alidns",
+        "rewrite_ttl": 60
+      }
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": ["dns"],
+        "action": "hijack-dns"
+      },
+      {
+        "rule_set": ["geosite-category-ads-all"],
+        "action": "reject"
+      },
+      {
+        "rule_set": ["geoip-cn", "geosite-cn"],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "direct",
+        "update_interval": "24h"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "direct",
+        "update_interval": "24h"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+        "download_detour": "direct",
+        "update_interval": "24h"
+      }
+    ],
+    "auto_detect_interface": true,
+    "final": "direct",
+    "default_domain_resolver": {
+      "server": "cloudflare",
+      "rewrite_ttl": 60
+    }
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "cache_id": "mycacheid",
+      "store_fakeip": true
+    }
+  }
+}

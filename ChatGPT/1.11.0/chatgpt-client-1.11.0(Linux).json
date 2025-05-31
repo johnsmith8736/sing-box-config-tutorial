@@ -1,0 +1,246 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "tag": "alidns",
+        "address": "https://223.5.5.5/dns-query",
+        "strategy": "ipv4_only",
+        "detour": "direct"
+      },
+      {
+        "tag": "cloudflare",
+        "address": "https://1.1.1.1/dns-query",
+        "strategy": "ipv4_only",
+        "detour": "proxy"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": [
+          "geosite-cn"
+        ],
+        "server": "alidns",
+        "rule_set_ip_cidr_accept_empty": true
+      },
+      {
+        "rule_set": [
+          "geosite-category-ads-all"
+        ],
+        "server": "block",
+        "rule_set_ip_cidr_accept_empty": true
+      }
+    ],
+    "final": "cloudflare",
+    "strategy": "ipv4_only",
+    "disable_cache": false,
+    "disable_expire": false
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "tun0",
+      "address": [
+        "172.19.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system",
+      "sniff": true
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "::",
+      "listen_port": 2080,
+      "sniff": true,
+      "users": []
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct",
+        "sing-box-reality"
+      ]
+    },
+    {
+      "type": "vless",
+      "tag": "sing-box-reality",
+      "server": "34.97.173.171",
+      "server_port": 443,
+      "uuid": "0df3dd7d-2ad7-48cc-9a0f-2477f16b544d",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.nhk.or.jp",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "5-28WuUtOPNOHlpEjMY6Fv-2jkw592RYtqB1q7MzIxE",
+          "short_id": "884cf6bb8f4ace39"
+        }
+      },
+      "packet_encoding": "xudp"
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "tag": "auto",
+      "type": "urltest",
+      "outbounds": [
+        "sing-box-reality"
+      ],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "1m",
+      "tolerance": 50
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": ["dns"],
+        "action": "hijack-dns"
+      },
+      {
+        "inbound": ["tun-in", "mixed-in"],
+        "action": "sniff"
+      },
+      {
+        "rule_set": ["geosite-category-ads-all"],
+        "action": "reject"
+      },
+      {
+        "ip_is_private": true,
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [".cn"],
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": ["geoip-cn", "geosite-cn", "geosite-private"],
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": ["geosite-openai"],
+        "action": "route",
+        "outbound": "proxy"
+      },
+      {
+        "rule_set": ["geosite-abema"],
+        "action": "route",
+        "outbound": "proxy"
+      },
+      {
+        "clash_mode": "direct",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "global",
+        "action": "route",
+        "outbound": "proxy"
+      },
+      {
+        "domain": [
+          "clash.razord.top",
+          "yacd.metacubex.one",
+          "yacd.haishan.me",
+          "d.metacubex.one",
+          "github.com",
+          "raw.githubusercontent.com"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-private",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-openai",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/openai.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-abema",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/abema.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      }
+    ],
+    "auto_detect_interface": true,
+    "final": "proxy"
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:9090",
+      "external_ui": "dashboard",
+      "secret": "",
+      "default_mode": "rule",
+      "access_control_allow_origin": [
+        "http://127.0.0.1",
+        "http://yacd.haishan.me"
+      ],
+      "access_control_allow_private_network": true
+    },
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "cache_id": "mycacheid",
+      "store_fakeip": true
+    }
+  }
+}

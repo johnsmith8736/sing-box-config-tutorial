@@ -1,0 +1,199 @@
+{
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "alidns",
+        "type": "https",
+        "server": "223.5.5.5",
+        "detour": "direct"
+      },
+      {
+        "tag": "cloudflare",
+        "type": "https",
+        "server": "1.1.1.1",
+        "detour": "direct"
+      },
+      {
+        "tag": "block",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": ["geosite-cn"],
+        "server": "alidns",
+        "rule_set_ip_cidr_accept_empty": true
+      },
+      {
+        "rule_set": ["geosite-category-ads-all"],
+        "server": "block",
+        "rule_set_ip_cidr_accept_empty": true
+      }
+    ],
+    "final": "cloudflare"
+  },
+  "inbounds": [
+    { 
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [
+        {
+          "uuid": "e42e5035-b29b-4ecb-bb93-2dad8a555feb",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "www.nhk.or.jp",
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "www.nhk.or.jp",
+            "server_port": 443
+          },
+          "private_key": "sDUmOJm58nJyx3wCnc6hHpW8mlD5KhmUKjhiBLcVg1I",
+          "short_id": [
+            "dc2772a0a0063bbd"
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct",
+      "domain_resolver": {
+        "server": "alidns",
+        "rewrite_ttl": 60
+      }
+    }
+  ],
+  "endpoints": [
+    {
+      "type": "wireguard",
+      "tag": "warp",
+      "address": [
+        "172.16.0.2/32",
+        "2606:4700:110:8d32:56bb:4f4f:b011:229e/128"
+      ],
+      "private_key": "kOs2vbY90wUrcqHyhtb5GGqU84Rr9WO1bVa9ATM3XXA=",
+      "peers": [
+        {
+          "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+          "allowed_ips": [
+            "0.0.0.0/0",
+            "::/0"
+          ],
+          "address": "162.159.192.7",
+          "port": 2408,
+          "reserved": [202, 203, 170]
+        }
+      ],
+      "mtu": 1280,
+      "domain_resolver": {
+        "server": "cloudflare",
+        "rewrite_ttl": 60
+      }
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "protocol": ["dns"],
+        "action": "hijack-dns"
+      },
+      {
+        "inbound": ["vless-in"],
+        "action": "sniff"
+      },
+      {
+        "rule_set": ["geosite-category-ads-all"],
+        "action": "reject"
+      },
+      {
+        "ip_is_private": true,
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": ["geoip-cn", "geosite-cn"],
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": ["geosite-openai"],
+        "action": "route",
+        "outbound": "warp"
+      },
+      {
+        "rule_set": ["geosite-abema"],
+        "action": "route",
+        "outbound": "warp"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-openai",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/openai.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      },
+      {
+        "tag": "geosite-abema",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/abema.srs",
+        "download_detour": "direct",
+        "update_interval": "1d"
+      }
+    ],
+    "auto_detect_interface": true,
+    "final": "direct",
+    "default_domain_resolver": {
+      "server": "cloudflare",
+      "rewrite_ttl": 60
+    }
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "cache_id": "mycacheid",
+      "store_fakeip": true
+    }
+  }
+}
